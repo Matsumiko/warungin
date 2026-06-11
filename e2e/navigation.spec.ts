@@ -9,7 +9,7 @@ test.describe("Navigation", () => {
     await expect(page.getByText("Utama")).toBeVisible();
     await expect(page.getByText("Katalog")).toBeVisible();
     await expect(page.getByText("Pembelian")).toBeVisible();
-    await expect(page.getByText("Penjualan")).toBeVisible();
+    await expect(page.getByText("Penjualan", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Operasional")).toBeVisible();
 
     // Verify key nav items
@@ -57,8 +57,8 @@ test.describe("Navigation", () => {
   });
 
   test("logout prevents access to protected routes", async ({ page }) => {
-    const creds = await register(page);
-    await expect(page.getByText("Dashboard")).toBeVisible();
+    await register(page);
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
     // Logout
     await page.getByRole("button", { name: "Keluar" }).click();

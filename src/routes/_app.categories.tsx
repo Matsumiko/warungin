@@ -20,9 +20,9 @@ function CategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const formEl = e.currentTarget;
+  async function handleSubmit() {
+    const formEl = document.querySelector("form");
+    if (!formEl) return;
     const form = new FormData(formEl);
     setSubmitting(true);
     try {
@@ -91,8 +91,7 @@ function CategoriesPage() {
       </div>
       {showForm && (
         <form
-          onSubmit={handleSubmit}
-          className="grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-[1fr_96px_160px_auto]"
+          className="grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-[1fr_96px_160px auto]"
         >
           <input name="name" required placeholder="Nama kategori" className={inputCls} />
           <input name="icon" placeholder="Ikon" defaultValue="🏷️" className={inputCls} />
@@ -103,7 +102,9 @@ function CategoriesPage() {
             className={inputCls}
           />
           <button
+            type="button"
             disabled={submitting}
+            onClick={handleSubmit}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
           >
             {submitting ? "Menyimpan..." : "Simpan"}

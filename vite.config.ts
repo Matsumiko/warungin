@@ -41,5 +41,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [tailwindcss(), csrfDevPlugin(), tanstackStart(), react(), tsconfigPaths()],
+  plugins: [tailwindcss(), csrfDevPlugin(), tanstackStart({ serverFns: { disableCsrfMiddlewareWarning: true } }), react(), tsconfigPaths()],
 });
