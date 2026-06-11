@@ -201,7 +201,7 @@ export const id: Record<string, string> = {
 
   // Time
   "time.justNow": "Baru saja",
-  "time.minutesAgo": "menit lalu",
+  "time.minutesAgo": "{count} menit lalu",
   "time.hoursAgo": "jam lalu",
   "time.daysAgo": "hari lalu",
   "time.minutesShort": "mnt",

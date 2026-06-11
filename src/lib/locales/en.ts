@@ -201,7 +201,7 @@ export const en: Record<string, string> = {
 
   // Time
   "time.justNow": "Just now",
-  "time.minutesAgo": "min ago",
+  "time.minutesAgo": "{count} min ago",
   "time.hoursAgo": "hours ago",
   "time.daysAgo": "days ago",
   "time.minutesShort": "min",

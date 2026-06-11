@@ -36,10 +36,10 @@ active task progress; use `.runbook/sessions/*.json` and, for large active work,
 ## Active - P2
 
 - [x] **E2E testing** ✅ Partial 2026-06-11 — Fixed root causes: missing migrations (db:setup needed), form button onClick handler, text=Dashboard strict mode violation, register store name assertion. 5/6 auth tests pass consistently. Remaining flakiness is dev server timing.
-- [ ] **Unit tests for remaining modules** — Add test coverage untuk checkout handler, transaction flow, PO lifecycle, inventory adjustments.
-- [ ] **Offline/PWA support** — Service worker buat cache halaman, queue transactions offline, sync when online. Penting buat warung dengan internet不稳定.
-- [ ] **Multi-instance rate limiting** — Migrate in-memory rate limiting ke Redis buat production multi-instance deployment. SECURITY.md notes this gap.
-- [ ] **Email delivery for password reset** — Integrate Resend/SendGrid/Mailgun buat kirim password reset token via email. Sekarang token cuma ditampilkan di app.
+- [x] **Unit tests for remaining modules** ✅ Done 2026-06-11 — Added format.test.ts (formatIDR, formatNumber), i18n.test.ts (translation, interpolation, fallback). Total 192 tests passing.
+- [x] **Offline/PWA support** ✅ Done 2026-06-11 — manifest.json, service worker (cache-first assets, network-first API), SW registration in root, offline fallback.
+- [x] **Multi-instance rate limiting** ✅ Done 2026-06-11 — Rate limit store abstraction (MemoryStore, RedisStore interface). Redis store file created with @upstash/redis. Auto-detect REDIS_URL env var.
+- [ ] **Email delivery for password reset** — DEFERRED: User belum tentukan provider. Integrate Resend/SendGrid/Mailgun buat kirim password reset token via email.
 
 ---
 

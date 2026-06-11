@@ -1,8 +1,86 @@
-type RateLimitEntry = { count: number; resetAt: number };
+// ─── Store Abstraction ──────────────────────────────────────────
 
-const store = new Map<string, RateLimitEntry>();
+export interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
 
-// Periodic cleanup every 60s to prevent unbounded growth
+export interface LockoutEntry {
+  count: number;
+  unlockAt: number;
+}
+
+export interface RateLimitStore {
+  getRateLimit(key: string): RateLimitEntry | undefined;
+  setRateLimit(key: string, entry: RateLimitEntry): void;
+  deleteRateLimit(key: string): void;
+  getLockout(email: string): LockoutEntry | undefined;
+  setLockout(email: string, entry: LockoutEntry): void;
+  deleteLockout(email: string): void;
+  cleanupRateLimits(now: number): void;
+  cleanupLockouts(now: number): void;
+}
+
+// ─── Memory Store ───────────────────────────────────────────────
+
+class MemoryStore implements RateLimitStore {
+  private rateLimits = new Map<string, RateLimitEntry>();
+  private lockouts = new Map<string, LockoutEntry>();
+
+  getRateLimit(key: string) {
+    return this.rateLimits.get(key);
+  }
+
+  setRateLimit(key: string, entry: RateLimitEntry) {
+    this.rateLimits.set(key, entry);
+  }
+
+  deleteRateLimit(key: string) {
+    this.rateLimits.delete(key);
+  }
+
+  getLockout(email: string) {
+    return this.lockouts.get(email);
+  }
+
+  setLockout(email: string, entry: LockoutEntry) {
+    this.lockouts.set(email, entry);
+  }
+
+  deleteLockout(email: string) {
+    this.lockouts.delete(email);
+  }
+
+  cleanupRateLimits(now: number) {
+    for (const [key, entry] of this.rateLimits) {
+      if (now > entry.resetAt) this.rateLimits.delete(key);
+    }
+  }
+
+  cleanupLockouts(now: number) {
+    for (const [key, entry] of this.lockouts) {
+      if (now > entry.unlockAt) this.lockouts.delete(key);
+    }
+  }
+}
+
+// ─── Store Singleton ────────────────────────────────────────────
+
+let storeInstance: RateLimitStore | null = null;
+
+function getStore(): RateLimitStore {
+  if (storeInstance) return storeInstance;
+  storeInstance = new MemoryStore();
+  return storeInstance;
+}
+
+// Reset store (for testing)
+export function resetStore() {
+  storeInstance = null;
+}
+
+// ─── Rate Limiting Logic ────────────────────────────────────────
+
 const CLEANUP_INTERVAL = 60_000;
 let lastCleanup = Date.now();
 
@@ -10,12 +88,9 @@ function cleanup() {
   const now = Date.now();
   if (now - lastCleanup < CLEANUP_INTERVAL) return;
   lastCleanup = now;
-  for (const [key, entry] of store) {
-    if (now > entry.resetAt) store.delete(key);
-  }
-  for (const [key, entry] of lockoutStore) {
-    if (now > entry.unlockAt) lockoutStore.delete(key);
-  }
+  const s = getStore();
+  s.cleanupRateLimits(now);
+  s.cleanupLockouts(now);
 }
 
 /**
@@ -30,12 +105,12 @@ export function checkRateLimit(
   windowMs: number,
 ): { ok: boolean; retryAfter?: number } {
   cleanup();
-
+  const s = getStore();
   const now = Date.now();
-  const entry = store.get(key);
+  const entry = s.getRateLimit(key);
 
   if (!entry || now > entry.resetAt) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
+    s.setRateLimit(key, { count: 1, resetAt: now + windowMs });
     return { ok: true };
   }
 
@@ -45,6 +120,7 @@ export function checkRateLimit(
   }
 
   entry.count++;
+  s.setRateLimit(key, entry);
   return { ok: true };
 }
 
@@ -71,19 +147,17 @@ export function checkLoginRateLimit(
 
 // ─── Account Lockout ─────────────────────────────────────────────
 
-type LockoutEntry = { count: number; unlockAt: number };
-const lockoutStore = new Map<string, LockoutEntry>();
-
 const LOCKOUT_THRESHOLD = 10;
 const LOCKOUT_DURATION = 15 * 60 * 1000;
 
 export function isAccountLocked(email: string): { locked: boolean; retryAfter?: number } {
-  const entry = lockoutStore.get(email);
+  const s = getStore();
+  const entry = s.getLockout(email);
   if (!entry) return { locked: false };
 
   const now = Date.now();
   if (now >= entry.unlockAt) {
-    lockoutStore.delete(email);
+    s.deleteLockout(email);
     return { locked: false };
   }
 
@@ -91,19 +165,20 @@ export function isAccountLocked(email: string): { locked: boolean; retryAfter?: 
 }
 
 export function recordFailedLogin(email: string): void {
+  const s = getStore();
   const now = Date.now();
-  const entry = lockoutStore.get(email);
+  const entry = s.getLockout(email);
 
   if (!entry || now > entry.unlockAt) {
-    lockoutStore.set(email, { count: 1, unlockAt: now + LOCKOUT_DURATION });
+    s.setLockout(email, { count: 1, unlockAt: now + LOCKOUT_DURATION });
   } else if (entry.count >= LOCKOUT_THRESHOLD - 1) {
-    // Next failure after threshold: lock immediately
-    lockoutStore.set(email, { count: entry.count + 1, unlockAt: now + LOCKOUT_DURATION });
+    s.setLockout(email, { count: entry.count + 1, unlockAt: now + LOCKOUT_DURATION });
   } else {
     entry.count++;
+    s.setLockout(email, entry);
   }
 }
 
 export function clearFailedLogins(email: string): void {
-  lockoutStore.delete(email);
+  getStore().deleteLockout(email);
 }
